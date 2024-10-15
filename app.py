@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-import openai
+from openai import OpenAI
 import json
 import xml.etree.ElementTree as ET
 from datetime import date
@@ -8,17 +8,22 @@ from datetime import datetime, timedelta
 import pandas as pd
 import sqlite3
 import re
+import traceback
+
 
 # Load the OpenAI API key from a configuration file
 with open("config.json", "r") as config_file:
     config = json.load(config_file)
-    openai.api_key = config.get("OPENAI_API_KEY")
+    print(config)
+    client = OpenAI(api_key=config.get("OPENAI_API_KEY"))
 
 WORK_START = 8  # 8 AM
 WORK_END = 18   # 6 PM
 LUNCH_START = 12
 LUNCH_END = 14
 limit_answers = 5
+limit_xml_sys_errors = 2
+st.session_state.xml_errors = 0
 
 weekdays = {0 : "Monday", 1 : "Tuesday", 2 : "Wednesday", 3 : "Thursday", 4 : "Friday", 5 : "Saturday", 6 : "Sunday"}
 
@@ -30,7 +35,6 @@ def get_users():
 
 def trim_string(answer):
     # Find the positions of the tags
-    print(answer)
     cleaned_answer = re.search(r'<(employee|lambda)>.*?</\1>', answer, re.DOTALL).group()
     pos_employee = cleaned_answer.find("</employee>") + len("</employee>")
     pos_lambda = cleaned_answer.find("</lambda>") + len("</lambda>")
@@ -70,7 +74,7 @@ def send_to_llm():
 
     try:
         # Make a request to the OpenAI API
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.with_raw_response.create(
             model="gpt-4o",  # Use "model" instead of "engine"
             messages=[
                 {"role": "system", "content": st.session_state.system_instructions}
@@ -79,13 +83,14 @@ def send_to_llm():
             max_tokens=2400,
             temperature=0
         )
-        # Extract and return the text response
-        actions = response.choices[0].message['content'].strip().split("[follow-up-action]")
+        print(response.parse().choices[0])
+        actions = response.parse().choices[0].message.content.split("[follow-up-action]")
         actions = [trim_string(t) for t in actions]
         actions = [item for item in actions if item is not None]
         return actions
     except Exception as e:
-        return f"Error: {str(e)}"
+        print(f"Error: {str(e)}")
+        return["<employee>An error occured. Please contact your administrator if the error persists.</employee>"]
 
 def get_email_by_name(name):
     try:
@@ -131,6 +136,7 @@ def setup_meeting(data):
         # Commit the transaction
         conn.commit()
     except Exception as e:
+        print(f"Error: {str(e)}")
         return "Error while creating the meeting. Tell employee to contact administrator if the error persist :  {e}"
     return "Meeting Created Successfully"
 
@@ -378,30 +384,31 @@ def analyze_lambda_json(json_string):
 
 def add_llm_answer():
     st.session_state.answers_count +=1
-    if st.session_state.answers_count >= limit_answers:
-        with st.chat_message("assistant"):
-            st.markdown("number of answers reached. No more calls to LLM.")
-        return
-    actions = send_to_llm()
-    for action in actions:
-        st.session_state.messages.append({"role" : "assistant", "content" : action})
-        try:
-            root_text = get_root_text(action)
-            if is_employee(action):
-                with st.chat_message("assistant"):
-                    st.markdown(root_text)
-            if not is_employee(action):
-                st.session_state.lambda_json_code =  root_text
-                lambda_answer = analyze_lambda_json(root_text)
-                st.session_state.messages.append({"role" : "lambda", "content" : lambda_answer})
-                add_llm_answer()
-                break
-        except:
-            st.session_state.messages.append({"role" : "xml_system", "content" : xml_sys_error})
-            print("response format incorrect")
-            st.error("An issue occurred with the response format. Please contact the administrator if this problem persists.")
-            add_llm_answer()
-            return
+    if st.session_state.answers_count < limit_answers:
+        actions = send_to_llm()
+        for action in actions:
+            st.session_state.messages.append({"role" : "assistant", "content" : action})
+            try:
+                root_text = get_root_text(action)
+                if is_employee(action):
+                    with st.chat_message("assistant"):
+                        st.markdown(root_text)
+                if not is_employee(action):
+                    st.session_state.lambda_json_code =  root_text
+                    lambda_answer = analyze_lambda_json(root_text)
+                    st.session_state.messages.append({"role" : "lambda", "content" : lambda_answer})
+                    add_llm_answer()
+            except Exception as e:
+                print(f"Error: {str(e)}")
+                print(traceback.print_exc())
+                st.session_state.messages.append({"role" : "xml_system", "content" : xml_sys_error})
+                print("response format incorrect")
+                st.error("An issue occurred with the response format. Please contact the administrator if this problem persists.")
+                st.session_state.xml_errors += 1
+                print(st.session_state.xml_errors)
+                if(st.session_state.xml_errors  < limit_xml_sys_errors):
+                    print("retry llm call")
+                    add_llm_answer()
 
 # Connect to the SQLite database
 conn = sqlite3.connect('assistant.db')
@@ -452,7 +459,9 @@ for message in st.session_state.messages:
             if is_employee(message["content"]):
                 with st.chat_message("assistant"):
                     st.markdown(get_root_text(message["content"]))
-        except:
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            print(traceback.print_exc())
             print("found a non formatted answer from gpt")
 
 
@@ -461,6 +470,7 @@ if user_prompt := st.chat_input("What is up?"):
     if(user_prompt.strip()):
         # Display user message in chat message container
         st.session_state.answers_count = 0
+        print("prompt received")
         with st.chat_message("user"):
             print(user_prompt)
             st.markdown(user_prompt)
