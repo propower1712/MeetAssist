@@ -14,7 +14,6 @@ import traceback
 # Load the OpenAI API key from a configuration file
 with open("config.json", "r") as config_file:
     config = json.load(config_file)
-    print(config)
     client = OpenAI(api_key=config.get("OPENAI_API_KEY"))
 
 WORK_START = 8  # 8 AM
@@ -79,14 +78,18 @@ def send_to_llm():
             messages=[
                 {"role": "system", "content": st.session_state.system_instructions}
             ] + 
-            [{"role": "assistant" if message["role"] == "assistant" else "user", "content": f"[{message['role']}] : {message['content']}"} for message in st.session_state.messages],
+            [{"role": "assistant" if message["role"] == "assistant" else "user", "content": f"[{message['role']}] : {message['content']}"} for message in st.session_state.messages] +
+            [
+                {"role": "system", "content": st.session_state.conformity_instructions}
+            ],
             max_tokens=2400,
             temperature=0
         )
         print(response.parse().choices[0])
         actions = response.parse().choices[0].message.content.split("[follow-up-action]")
-        actions = [trim_string(t) for t in actions]
-        actions = [item for item in actions if item is not None]
+        print(actions)
+        actions = [trim_string(t.strip()) for t in actions if len(t.strip()) > 0]
+        actions = [item for item in actions]
         return actions
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -444,6 +447,12 @@ if "system_instructions" not in st.session_state:
     with open('initial_prompt.txt', 'r') as file:
         # Read the entire content of the file into a string variable
         st.session_state.system_instructions = file.read()
+
+if "conformity_instructions" not in st.session_state:
+    # Open the text file in read mode
+    with open('conformity_prompt.txt', 'r') as file:
+        # Read the entire content of the file into a string variable
+        st.session_state.conformity_instructions = file.read()
 
 # Initialize chat history
 if "messages" not in st.session_state:
