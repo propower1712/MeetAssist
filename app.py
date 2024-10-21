@@ -10,6 +10,109 @@ import sqlite3
 import re
 import traceback
 
+tools = [
+    {
+        "type" : "function",
+        "function" : {
+            "name" : "check_attendees",
+            "description": "Verify attendees in the database using by name. If attendees' emails are provided, skip this check. Check correctness of returned emails with Lambda before asking the employee for emails if not found.",
+            "parameters" : {
+                "type" : "object",
+                "properties" : {
+                    "attendees_by_name" : {
+                        "type" : "list",
+                        "description" : "Provide list of names here. For example : ['Eva Martin', 'Lucas Henry', 'Adonas Ringu']"
+                    }
+                },
+                "required": ["attendees_by_name"]
+            }
+        }
+    },
+    {
+        "type" : "function",
+        "function" : {
+            "name" : "check_availabilities",
+            "description": "After retrieving attendees' emails, you can check their meetings timeslots. Interpret an empty list as result of function as full availability. Please always remember that Lambda returns list of meetings, the availabilities are outside those timeslots.",
+            "parameters" : {
+                "type" : "object",
+                "properties" : {
+                    "attendees_by_email" : {
+                        "type" : "list",
+                        "description" : "Provide list of emails to get their availabilities"
+                    },
+                    "proposed_timeslot_start_time" : {
+                        "type" : "string",
+                        "description" : "Proposed start time for the meeting. If the user has some preference for a specific timeslot, this can be helpful to get the information if the attendees are available during that timeslot."
+                    },
+                    "proposed_timeslot_end_time" : {
+                        "type" : "string",
+                        "description" : "Proposed end time for the meeting."
+                    }
+                },
+                "required" : ["attendees_by_email"]
+            }
+        }
+    },
+    {
+        "type" : "function",
+        "function" : {
+            "name" : "propose_availabilities",
+            "description" : "If no preferred timeslot or attendees are unavailable, ask for preferred timeframe (e.g., 'next week'), and duration (e.g., '1 hour') and lambda will propose some available timeslots for you.",
+            "parameters" : {
+                "type" : "object",
+                "properties" : {
+                    "attendees_by_email" : {
+                        "type" : "list",
+                        "description" : "list of emails' attendees to check their availabilities."
+                    },
+                    "start_day" : {
+                        "type" : "str",
+                        "description" : "this is the first day to check availabilities. Provide it in the following format : %Y-%m-%dT%H:%M:%S"
+                    },
+                    "end_day" : {
+                        "type" : "str",
+                        "description" : "this is the last day calendar to check availabilities. Provide it in the following format : %Y-%m-%dT%H:%M:%S"
+                    },
+                    "meeting_duration" : {
+                        "type" : "int",
+                        "description" : "the meeting duration in minutes."
+                    }
+                },
+                "required" : ["attendees_by_email", "start_day", "end_day", "meeting_duration"]
+            }
+        }
+    },
+    {
+        "type" : "function",
+        "function" : {
+            "name" : "setup_meeting",
+            "description" : "Set up the meeting by calling this function. You need to gather all the required information before you proceed. Lambda will confirm the meeting creation.",
+            "parameters" : {
+                "type" : "object",
+                "properties" : {
+                    "attendees_by_email" : {
+                        "type" : "list",
+                        "description" : "list of emails' attendees to set up the meeting."
+                    },
+                    "start_time" : {
+                        "type" : "string",
+                        "description" : "The start time of the meeting"
+                    },
+                    "end_time" : {
+                        "type" : "string",
+                        "description" : "The end time of the meeting"
+                    },
+                    "title" : {
+                        "type" : "string",
+                        "title" : "the title of the meeting"
+                    }
+                },
+                "required" : ["attendees_by_email", "start_time", "end_time", "title"]
+            }
+        }
+    }
+]
+
 
 # Load the OpenAI API key from a configuration file
 with open("config.json", "r") as config_file:
@@ -73,21 +176,25 @@ def send_to_llm():
 
     try:
         # Make a request to the OpenAI API
+        messages = [{"role": "system", "content": st.session_state.system_instructions}]
+        for message in st.session_state.messages:
+            if message["role"] in ["tool_calls", "api_answer"]:
+                messages.append(message['content'])
+            else:
+                messages.append({"role" : message["role"], "content" : message["content"]})
+        messages.append({"role": "system", "content": st.session_state.conformity_instructions})
         response = client.chat.completions.with_raw_response.create(
             model="gpt-4o",  # Use "model" instead of "engine"
-            messages=[
-                {"role": "system", "content": st.session_state.system_instructions}
-            ] + 
-            [{"role": "assistant" if message["role"] == "assistant" else "user", "content": f"[{message['role']}] : {message['content']}"} for message in st.session_state.messages] +
-            [
-                {"role": "system", "content": st.session_state.conformity_instructions}
-            ],
+            messages=messages,
             max_tokens=2400,
             temperature=0
         )
-        print(response.parse().choices[0])
-        actions = response.parse().choices[0].message.content.split("[follow-up-action]")
-        print(actions)
+        choice = response.parse().choices[0]
+        if(choice.finish_reason == "tool_calls"):
+            st.session_state.messages.append({"role" : "tool_calls", "content" : choice["message"]})
+            data = choice.message.tool_calls[0].function
+            api_answer = analyze_lambda_json(data)
+        response = choice.message.tool_calls[0]
         actions = [trim_string(t.strip()) for t in actions if len(t.strip()) > 0]
         actions = [item for item in actions]
         return actions
@@ -112,13 +219,13 @@ def check_users(names):
     for name in names:
         attendees[name] = get_email_by_name(name)
     json_attendees = json.dumps(attendees)
-    return "{}. Check these emails with employee.".format(json_attendees)
+    return "{}".format(json_attendees)
 
 def setup_meeting(data):
     title = data["title"]
     start_time = data["start_time"]
     end_time = data["end_time"]
-    participants = data["attendees"]
+    participants = data["attendees_by_email"]
     try:
         # Insert the new meeting
         cursor.execute("""
@@ -141,7 +248,7 @@ def setup_meeting(data):
     except Exception as e:
         print(f"Error: {str(e)}")
         return "Error while creating the meeting. Tell employee to contact administrator if the error persist :  {e}"
-    return "Meeting Created Successfully"
+    return "Success"
 
 def check_availabilities(data):
     email_meetings = {}
@@ -170,8 +277,8 @@ def check_availabilities(data):
         print(f"An error occurred: {e}")
         return f"Error while checking availabilities. Tell employee to contact administrator if the error persist :  {e}"
     if "proposed_timeslot" in data:
-        proposed_start_time = datetime.fromisoformat(data["proposed_timeslot"]["start_time"])
-        proposed_end_time = datetime.fromisoformat(data["proposed_timeslot"]["end_time"])
+        proposed_start_time = datetime.fromisoformat(data["proposed_timeslot_start_time"])
+        proposed_end_time = datetime.fromisoformat(data["proposed_timeslot_end_time"])
         for email in emails:
             availability = True
             for meeting in email_meetings[email]["meetings_timeslots"]:
@@ -334,7 +441,7 @@ def find_common_availabilities(data):
         if intervals:  # If there's any available slot on this day
             proposed_slots.append(intervals[0])  # Just propose the first slot of each day
 
-    return "Proposed Timeslots : {}".format(proposed_slots)
+    return "{}".format(proposed_slots)
 
 
 def analyze_lambda_json(json_string):
@@ -342,7 +449,7 @@ def analyze_lambda_json(json_string):
     if "action" not in data:
         print("action not found")
         return "Action not provided. Please provide me one of the following actions {}.\n".format(allowed_actions)
-    action = data["action"]
+    action = data["name"]
     if action == "check_attendees":
         if("attendees_by_name" not in data):
             print("attendees_by_name not found")
@@ -358,7 +465,7 @@ def analyze_lambda_json(json_string):
         if "title" not in data:
             print("title is not provided")
             return "Please provide me the title of the meeting"
-        if not isinstance(data["attendees"], list):
+        if not isinstance(data["attendees_by_email"], list):
             print("attendees is not a list")
             return "Please provide me attendees in form of a list of emails"
         if "start_time" not in data:
@@ -388,30 +495,16 @@ def analyze_lambda_json(json_string):
 def add_llm_answer():
     st.session_state.answers_count +=1
     if st.session_state.answers_count < limit_answers:
-        actions = send_to_llm()
-        for action in actions:
-            st.session_state.messages.append({"role" : "assistant", "content" : action})
-            try:
-                root_text = get_root_text(action)
-                if is_employee(action):
-                    with st.chat_message("assistant"):
-                        st.markdown(root_text)
-                if not is_employee(action):
-                    st.session_state.lambda_json_code =  root_text
-                    lambda_answer = analyze_lambda_json(root_text)
-                    st.session_state.messages.append({"role" : "lambda", "content" : lambda_answer})
-                    add_llm_answer()
-            except Exception as e:
-                print(f"Error: {str(e)}")
-                print(traceback.print_exc())
-                st.session_state.messages.append({"role" : "xml_system", "content" : xml_sys_error})
-                print("response format incorrect")
-                st.error("An issue occurred with the response format. Please contact the administrator if this problem persists.")
-                st.session_state.xml_errors += 1
-                print(st.session_state.xml_errors)
-                if(st.session_state.xml_errors  < limit_xml_sys_errors):
-                    print("retry llm call")
-                    add_llm_answer()
+        answer = send_to_llm()
+        st.session_state.messages.append({"role" : "assistant", "content" : answer})
+        if is_employee(action):
+            with st.chat_message("assistant"):
+                st.markdown(root_text)
+        if not is_employee(action):
+            st.session_state.lambda_json_code =  root_text
+            lambda_answer = analyze_lambda_json(root_text)
+            st.session_state.messages.append({"role" : "lambda", "content" : lambda_answer})
+            add_llm_answer()
 
 # Connect to the SQLite database
 conn = sqlite3.connect('assistant.db')
