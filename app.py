@@ -9,6 +9,17 @@ import pandas as pd
 import sqlite3
 import re
 import traceback
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,  # You can adjust the level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Customize the format
+    handlers=[
+        logging.StreamHandler()  # To output to the console
+        # logging.FileHandler("app.log")  # To output to a file
+    ]
+)
 
 tools = [
     {
@@ -199,14 +210,14 @@ def send_to_llm():
             temperature=0
         )
         choice = response.parse().choices[0]
-        print(choice)
+        logging.info("Choice result - {}".format(choice))
         if(choice.finish_reason == "tool_calls"):
             arguments = choice.message.tool_calls[0].function.arguments
             name = choice.message.tool_calls[0].function.name
             st.session_state.messages.append({"role" : "assistant", "content" : None, "function_call" : {"arguments" : arguments, "name" : name}})
             data = choice.message.tool_calls[0].function
             api_answer = analyze_lambda_json(data)
-            print(api_answer)
+            logging.info("API Results - {}".format(api_answer))
             st.session_state.messages.append({"role" : "function", "name" : choice.message.tool_calls[0].function.name,  "content" : api_answer})
             send_to_llm()
         else:
@@ -215,7 +226,7 @@ def send_to_llm():
             st.session_state.messages.append(message)
             write_message(message)
     except Exception as e:
-        print(f"Error: {str(e)}")
+        logging.error(f"Error: {str(e)}")
         st.session_state.messages.append({"role" : "assistant", "content" : "an error occurred. Please contact administrator if error persists"})
 
 def get_email_by_name(name):
@@ -226,7 +237,7 @@ def get_email_by_name(name):
         result = cursor.fetchone()
         return result
     except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
+        logging.error(f"An error occurred: {e}")
         return None
 
 
@@ -267,7 +278,7 @@ def setup_meeting(data):
         # Commit the transaction
         conn.commit()
     except Exception as e:
-        print(f"Error: {str(e)}")
+        logging.error(f"Error: {str(e)}")
         return json.dumps({"success" : "False",
                 "description" : "Error while creating the meeting. Tell user to contact administrator if the error persist :  {e}"})
     return json.dumps({"success" : "True"})
@@ -304,7 +315,7 @@ def check_availabilities(data):
             }
 
     except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
+        logging.error(f"An error occurred: {e}")
         return f"Error while checking availabilities. Tell user to contact administrator if the error persists: {e}"
 
     # If proposed timeslot is provided, check availability
@@ -332,7 +343,7 @@ def check_availabilities(data):
                     availability = False
 
             except sqlite3.Error as e:
-                print(f"An error occurred: {e}")
+                logging.error(f"An error occurred: {e}")
                 return f"Error while checking availabilities. Tell user to contact administrator if the error persists: {e}"
 
             # Store availability result for the attendee
@@ -492,44 +503,44 @@ def analyze_lambda_json(function_response):
     func_name = function_response.name
     if func_name == "check_attendees":
         if("attendees_by_name" not in data):
-            print("attendees_by_name not found")
+            logging.error("attendees_by_name not found")
             return "you didn't provide either attendees_by_name or attendees_by_email. Please provide it even with empty list."
         if not isinstance(data["attendees_by_name"], list):
-            print("attendees_by_name is not a list.")
+            logging.error("attendees_by_name is not a list.")
             return "attendees_by_name is not a list. Please provide it in a list format."
         return check_attendees(data["attendees_by_name"])
     if func_name == "setup_meeting":
         if "attendees_by_email" not in data:
-            print("attendees is not provided")
+            logging.error("attendees is not provided")
             return "Please provide me attendees in list format"
         if "title" not in data:
-            print("title is not provided")
+            logging.error("title is not provided")
             return "Please provide me the title of the meeting"
         if not isinstance(data["attendees_by_email"], list):
-            print("attendees is not a list")
+            logging.error("attendees is not a list")
             return "Please provide me attendees in form of a list of emails"
         if "start_time" not in data:
-            print("start_time not provided")
+            logging.error("start_time not provided")
             return "Please provide me start_time in the ISO 8601 format : YYYY-MM-DDTHH:MM:SS"
         if "end_time" not in data:
-            print("end_time not provided")
+            logging.error("end_time not provided")
             return "Please provide me end_time in the ISO 8601 format : YYYY-MM-DDTHH:MM:SS"
         if not is_iso8601(data["start_time"]):
-            print("start_time not provided is ISO Format")
+            logging.error("start_time not provided is ISO Format")
             return "Please provide me start_time in the ISO 8601 format : YYYY-MM-DDTHH:MM:SS"
         if not is_iso8601(data["end_time"]):
-            print("end_time not provided is ISO Format")
+            logging.error("end_time not provided is ISO Format")
             return "Please provide me end_time in the ISO 8601 format : YYYY-MM-DDTHH:MM:SS"
         return setup_meeting(data)
     if func_name in ["check_availabilities", "propose_availabilities"]:
         if "attendees_by_email" not in data:
-            print("attendees emails is not provided")
+            logging.error("attendees emails is not provided")
             return "Please provide me list of emails attendees_by_email"
         if "start_day" not in data:
-            print("start_day is not provided")
+            logging.error("start_day is not provided")
             return "Please provide me start_day"
         if "end_day" not in data:
-            print("end_day is not provided")
+            logging.error("end_day is not provided")
             return "Please provide me end_day"
         if func_name == "check_availabilities":
             return check_availabilities_json(data)
@@ -537,7 +548,7 @@ def analyze_lambda_json(function_response):
             return propose_availabilities(data)
     if func_name == "follow_up_action":
         if "content" not in data:
-            print("content for follow-up action not provided")
+            logging.error("content for follow-up action not provided")
             return "Please provide follow-up action content"
         write_message({"role" : "assistant", "content" : data["content"]})
     return {
@@ -606,9 +617,8 @@ if user_prompt := st.chat_input("What is up?"):
     if(user_prompt.strip()):
         # Display user message in chat message container
         st.session_state.answers_count = 0
-        print("prompt received")
         with st.chat_message("user"):
-            print(user_prompt)
+            logging.info("User prompt - {}".format(user_prompt))
             st.markdown(user_prompt)
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": user_prompt})
