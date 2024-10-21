@@ -1,0 +1,139 @@
+[
+    {
+        "type" : "function",
+        "function" : {
+            "name" : "check_attendees",
+            "description": "Verify attendees in the database using by name. If attendees' emails are provided, skip this check. Check correctness of returned emails using this function before asking the user for emails if not found.",
+            "parameters" : {
+                "type" : "object",
+                "properties" : {
+                    "attendees_by_name" : {
+                        "type" : "array",
+                        "items" : {
+                            "type" : "string"
+                        },
+                        "description" : "Provide list of names here. For example : ['Eva Martin', 'Lucas Henry', 'Adonas Ringu']"
+                    }
+                },
+                "required": ["attendees_by_name"]
+            }
+        }
+    },
+    {
+        "type" : "function",
+        "function" : {
+            "name" : "check_availabilities",
+            "description": "Use this function to check availabilities of attendees when the user gives you a timeslot. You need first to get their emails. Interpret an empty list as result of function as full availability. Please always remember that this function returns list of meetings, the availabilities are outside those timeslots.",
+            "parameters" : {
+                "type" : "object",
+                "properties" : {
+                    "attendees_by_email" : {
+                        "type" : "array",
+                        "items" : {
+                            "type" : "string"
+                        },
+                        "description" : "Provide list of emails to get their availabilities"
+                    },
+                    "proposed_timeslot_start_time" : {
+                        "type" : "string",
+                        "description" : "Proposed start time for the meeting. If the user has some preference for a specific timeslot, this can be helpful to get the information if the attendees are available during that timeslot. Provide it in the following format : %Y-%m-%dT%H:%M:%S."
+                    },
+                    "proposed_timeslot_end_time" : {
+                        "type" : "string",
+                        "description" : "Proposed end time for the meeting. Provide it in the following format : %Y-%m-%dT%H:%M:%S."
+                    },
+                    "start_day": {
+                        "type" : "string",
+                        "description" : "The first day where to check availabilities. Always default it to today if not provided by the user. Provide it in the following format : %Y-%m-%dT%H:%M:%S."
+                    },
+                    "end_day": {
+                        "type" : "string",
+                        "description" : "The last day where to check availabilities. Always default it to one week after the start_day if not provided by the user. Provide it in the following format : %Y-%m-%dT%H:%M:%S."
+                    }
+                },
+                "required" : ["attendees_by_email", "start_day", "end_day"]
+            }
+        }
+    },
+    {
+        "type" : "function",
+        "function" : {
+            "name" : "propose_availabilities",
+            "description" : "If no preferred timeslot or attendees are unavailable, ask for preferred timeframe (e.g., 'next week'), and duration (e.g., '1 hour') and this function will propose some available timeslots for you.",
+            "parameters" : {
+                "type" : "object",
+                "properties" : {
+                    "attendees_by_email" : {
+                        "type" : "array",
+                        "items" : {
+                            "type" : "string"
+                        },
+                        "description" : "list of emails' attendees to check their availabilities."
+                    },
+                    "start_day" : {
+                        "type" : "string",
+                        "description" : "this is the first day to check availabilities. Provide it in the following format : %Y-%m-%dT%H:%M:%S"
+                    },
+                    "end_day" : {
+                        "type" : "string",
+                        "description" : "this is the last day calendar to check availabilities. Provide it in the following format : %Y-%m-%dT%H:%M:%S"
+                    },
+                    "meeting_duration" : {
+                        "type" : "integer",
+                        "description" : "the meeting duration in minutes."
+                    }
+                },
+                "required" : ["attendees_by_email", "start_day", "end_day", "meeting_duration"]
+            }
+        }
+    },
+    {
+        "type" : "function",
+        "function" : {
+            "name" : "setup_meeting",
+            "description" : "Set up the meeting by calling this function. You need to gather all the required information before you proceed. The return result will confirm the meeting creation.",
+            "parameters" : {
+                "type" : "object",
+                "properties" : {
+                    "attendees_by_email" : {
+                        "type" : "array",
+                        "items" : {
+                            "type" : "string"
+                        },
+                        "description" : "list of emails' attendees to set up the meeting."
+                    },
+                    "start_time" : {
+                        "type" : "string",
+                        "description" : "The start time of the meeting"
+                    },
+                    "end_time" : {
+                        "type" : "string",
+                        "description" : "The end time of the meeting"
+                    },
+                    "title" : {
+                        "type" : "string",
+                        "title" : "the title of the meeting. It should be collected from the user."
+                    }
+                },
+                "required" : ["attendees_by_email", "start_time", "end_time", "title"]
+            }
+        }
+    },
+    {
+        "type" : "function",
+        "function" : {
+            "name" : "follow_up_action",
+            "description" : "Use this function when you need to send to the user a message without requiring any input from him. For example, you should not tell the user to wait without doing a follow up action. This would make him wait for nothing.",
+            "parameters" : {
+                "type" : "object",
+                "properties" : {
+                    "content" : {
+                        "type" : "string",
+                        "description" : "The reply to the user while waiting for a follow-up message."
+                    }
+                },
+                "required" : ["content"]
+            }
+        }
+    }
+]
