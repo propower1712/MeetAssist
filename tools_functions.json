@@ -91,7 +91,7 @@
         "type" : "function",
         "function" : {
             "name" : "setup_meeting",
-            "description" : "Set up the meeting by calling this function. You need to gather all the required information before you proceed. The return result will confirm the meeting creation.",
+            "description" : "Set up the meeting by calling this function. You need to gather all the required information before you proceed. Confirm with the users the meetings details before proceeding. The return result will confirm the meeting creation.",
             "parameters" : {
                 "type" : "object",
                 "properties" : {

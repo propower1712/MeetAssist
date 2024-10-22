@@ -54,13 +54,6 @@ def send_to_llm():
         logging.error(f"Error: {str(e)}")
         st.session_state.messages.append({"role" : "assistant", "content" : "an error occurred. Please contact administrator if error persists"})
 
-def write_message(message):
-    if((message["role"] == "assistant") & (message["content"] is not None)):
-        with st.chat_message("assistant"):
-            st.markdown(message["content"])
-    elif(message["role"] == "user"):
-        with st.chat_message("user"):
-            st.markdown(message["content"])
 
 st.title("List of Users :")
 

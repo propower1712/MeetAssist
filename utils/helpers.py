@@ -344,10 +344,19 @@ def analyze_lambda_json(function_response, conn):
             logging.error("content for follow-up action not provided")
             return "Please provide follow-up action content"
         write_message({"role" : "assistant", "content" : data["content"]})
+        return "{'description' : 'waiting for follow-up action...'}"
     return {
                 "error" : True,
-                "description" : "unknown action provided. Please provide me one of the following actions {}.\n".format(allowed_actions)
+                "description" : "unknown function provided. Please provide me one of the actions provided to you.\n"
             }
+            
+def write_message(message):
+    if((message["role"] == "assistant") & (message["content"] is not None)):
+        with st.chat_message("assistant"):
+            st.markdown(message["content"])
+    elif(message["role"] == "user"):
+        with st.chat_message("user"):
+            st.markdown(message["content"])
 
 def init_logging():
     logging.basicConfig(
