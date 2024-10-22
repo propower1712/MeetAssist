@@ -60,10 +60,10 @@ def import_meeting_participants(csv_file_path):
 create_tables()
 
 # Import meetings data
-import_meetings("input/meetings.csv")
+import_meetings("../input/meetings.csv")
 
 # Import meeting participants data
-import_meeting_participants("input/meeting_participants_v2.csv")
+import_meeting_participants("../input/meeting_participants_v2.csv")
 
 
 # Commit changes and close the connection

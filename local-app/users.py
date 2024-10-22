@@ -28,7 +28,7 @@ def import_users_from_csv(csv_file_path):
 
 
 # Call the function with the path to your CSV file
-import_users_from_csv('input/users.csv')
+import_users_from_csv('../input/users.csv')
 
 
 # Commit changes and close the connection
