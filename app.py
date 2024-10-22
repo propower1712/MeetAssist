@@ -5,8 +5,6 @@ import re
 import logging
 from utils.helpers import *
 
-# Connect to the SQLite database
-conn = sqlite3.connect('assistant.db')
 init_logging()
 
 tools = load_json("tools_functions.json")
@@ -41,7 +39,7 @@ def send_to_llm():
             name = choice.message.tool_calls[0].function.name
             st.session_state.messages.append({"role" : "assistant", "content" : None, "function_call" : {"arguments" : arguments, "name" : name}})
             data = choice.message.tool_calls[0].function
-            api_answer = analyze_lambda_json(data, conn)
+            api_answer = analyze_lambda_json(data)
             logging.info("API Results - {}".format(api_answer))
             st.session_state.messages.append({"role" : "function", "name" : choice.message.tool_calls[0].function.name,  "content" : api_answer})
             send_to_llm()
@@ -57,7 +55,7 @@ def send_to_llm():
 
 st.title("List of Users :")
 
-st.dataframe(get_users(conn))
+st.dataframe(get_users())
 
 st.title("Meeting Assistant")
 
