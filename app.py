@@ -7,7 +7,7 @@ from utils.helpers import *
 
 init_logging()
 
-tools = load_json("tools_functions.json")
+tools = load_json("resources/tools_functions.json")
 config = load_json("config.json")
 client = define_client(config.get("OPENAI_API_KEY"))
 
@@ -63,13 +63,13 @@ st.session_state.answers_count = 0
 
 if "system_instructions" not in st.session_state:
     # Open the text file in read mode
-    with open('initial_prompt.txt', 'r') as file:
+    with open('resources/initial_prompt.txt', 'r') as file:
         # Read the entire content of the file into a string variable
         st.session_state.system_instructions = file.read()
 
 if "conformity_instructions" not in st.session_state:
     # Open the text file in read mode
-    with open('conformity_prompt.txt', 'r') as file:
+    with open('resources/conformity_prompt.txt', 'r') as file:
         # Read the entire content of the file into a string variable
         st.session_state.conformity_instructions = file.read()
 
