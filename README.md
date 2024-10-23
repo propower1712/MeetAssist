@@ -17,6 +17,7 @@ The main goal of this project is to demonstrate how GPT models can be utilized t
 - Verifies user availability and checks existing data.
 - Utilizes OpenAI's function calling feature to interact with a database.
 - Provides a conversational interface for user interaction.
+- Demonstrates a deployment process of GenAI project on AWS (ECS -> AWS Lambda -> AWS RDS).
 
 ## Motivation
 
@@ -27,3 +28,4 @@ The project was developed to showcase how GPT models can be applied in real-worl
 - **OpenAI GPT (with function calling)**: Core engine for processing user input and automating tasks.
 - **SQLite**: Used to manage users and meeting data.
 - **Python**: Main programming language for backend logic.
+- **AWS**: A terraform script to deploy the streamlit app on AWS (Still under development).
