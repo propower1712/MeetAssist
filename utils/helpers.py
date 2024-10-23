@@ -153,7 +153,7 @@ def normalize_availabilities_for_attendee(email, meetings_list, days):
     return daily_availabilities
 
 # Extracted function to find common intervals between all attendees
-def find_common_intervals(normalized_availabilities, days):
+def find_common_intervals(normalized_availabilities, days, meeting_duration):
     common_intervals_per_day = {}
     attendee_emails = list(normalized_availabilities.keys())
 
@@ -161,7 +161,7 @@ def find_common_intervals(normalized_availabilities, days):
         common_intervals = normalized_availabilities[attendee_emails[0]][day.date()]
 
         for email in attendee_emails[1:]:
-            common_intervals = find_overlapping_intervals(common_intervals, normalized_availabilities[email][day.date()])
+            common_intervals = find_overlapping_intervals(common_intervals, normalized_availabilities[email][day.date()], meeting_duration)
 
         if common_intervals:
             common_intervals_per_day[day.date()] = common_intervals
@@ -195,7 +195,7 @@ def propose_availabilities(data):
     }
 
     # Step 3: Find common intervals between all attendees for each day
-    common_intervals_per_day = find_common_intervals(normalized_availabilities, days)
+    common_intervals_per_day = find_common_intervals(normalized_availabilities, days, meeting_duration)
 
     # Step 4: Generate proposed slots
     proposed_slots = proposed_slots_generation(common_intervals_per_day, meeting_duration)
@@ -257,7 +257,7 @@ def subtract_intervals(available_intervals, unavailable_intervals):
     return free_intervals
 
 # Find overlapping intervals between different attendees
-def find_overlapping_intervals(intervals1, intervals2):
+def find_overlapping_intervals(intervals1, intervals2, meeting_duration):
     overlaps = []
     for int1 in intervals1:
         for int2 in intervals2:

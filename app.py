@@ -49,7 +49,7 @@ def send_to_llm():
             st.session_state.messages.append(message)
             write_message(message)
     except Exception as e:
-        logging.error(f"Error: {str(e)}")
+        logging.error(f"Error: {str(e)}", exc_info=True)
         st.session_state.messages.append({"role" : "assistant", "content" : "an error occurred. Please contact administrator if error persists"})
 
 
