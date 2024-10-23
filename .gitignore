@@ -1,5 +1,9 @@
-local-app/config.json
-local-app/app.log
-local-app/utils/__pycache__/
-local-app/.idea
-aws-app/terraform.tfvars
+app/config.json
+app/app.log
+app/utils/__pycache__/
+app/.idea
+app/terraform.tfvars
+app/.terraform
+app/.terraform.lock.hcl
+app/terraform.tfstate
+app/terraform.tfstate.backup
