@@ -1,9 +1,8 @@
 import streamlit as st
-from openai import OpenAI
-import pandas as pd
 import re
 import logging
 from utils.helpers import *
+from utils.meetings_api_lambda import *
 
 init_logging()
 
@@ -35,13 +34,14 @@ def send_to_llm():
         choice = response.parse().choices[0]
         logging.info("Choice result - {}".format(choice))
         if(choice.finish_reason == "tool_calls"):
-            arguments = choice.message.tool_calls[0].function.arguments
-            name = choice.message.tool_calls[0].function.name
+            tool_call = choice.message.tool_calls[0]
+            arguments = tool_call.function.arguments
+            name = tool_call.function.name
             st.session_state.messages.append({"role" : "assistant", "content" : None, "function_call" : {"arguments" : arguments, "name" : name}})
-            data = choice.message.tool_calls[0].function
-            api_answer = analyze_lambda_json(data)
+            data = {"name" : name, "arguments" : json.loads(arguments)}
+            api_answer = lambda_handler(data, None)
             logging.info("API Results - {}".format(api_answer))
-            st.session_state.messages.append({"role" : "function", "name" : choice.message.tool_calls[0].function.name,  "content" : api_answer})
+            st.session_state.messages.append({"role" : "function", "name" : name,  "content" : api_answer})
             send_to_llm()
         else:
             message = choice.message.content.strip()
