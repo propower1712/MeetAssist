@@ -5,6 +5,9 @@ conn = sqlite3.connect('assistant.db')
 c = conn.cursor()
 
 # Drop the existing users table if it exists
+c.execute("DROP TABLE IF EXISTS users")
+
+# Drop the existing users table if it exists
 c.execute("DROP TABLE IF EXISTS meetings")
 
 # Drop the existing users table if it exists
@@ -12,14 +15,21 @@ c.execute("DROP TABLE IF EXISTS meeting_participants")
 
 def create_tables():
     
+    # Create users table
+    c.execute('''
+    CREATE TABLE users (
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL PRIMARY KEY
+    );
+    ''')
+
     # Create meetings table
     c.execute('''
     CREATE TABLE IF NOT EXISTS meetings (
         meeting_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        start_time TEXT NOT NULL,
-        end_time TEXT NOT NULL,
-        description TEXT
+        title VARCHAR(255) NOT NULL,
+        start_time DATETIME NOT NULL,
+        end_time DATETIME NOT NULL
     );
     ''')
     
@@ -27,11 +37,11 @@ def create_tables():
     # Create a new meeting_participants table with user_email
     c.execute("""
         CREATE TABLE meeting_participants (
-            meeting_id INTEGER,
-            email TEXT,
-            PRIMARY KEY (meeting_id, email),
-            FOREIGN KEY (meeting_id) REFERENCES meetings (meeting_id),
-            FOREIGN KEY (email) REFERENCES users (email)
+        meeting_id INTEGER NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        PRIMARY KEY (meeting_id, email),
+        FOREIGN KEY (meeting_id) REFERENCES meetings (meeting_id),
+        FOREIGN KEY (email) REFERENCES users (email)
         )
     """)
 
@@ -57,13 +67,21 @@ def import_meeting_participants(csv_file_path):
     insert_query = "INSERT INTO meeting_participants (meeting_id, email) VALUES (?, ?)"
     import_data_from_csv(csv_file_path, insert_query)
 
+def import_users(csv_file_path):
+    # SQL query to insert into meeting_participants
+    insert_query = "INSERT INTO users (name, email) VALUES (?, ?)"
+    import_data_from_csv(csv_file_path, insert_query)
+
 create_tables()
 
 # Import meetings data
-import_meetings("../input/meetings.csv")
+import_meetings("./input/meetings.csv")
+
+# Import meetings data
+import_users("./input/users.csv")
 
 # Import meeting participants data
-import_meeting_participants("../input/meeting_participants_v2.csv")
+import_meeting_participants("./input/meeting_participants_v2.csv")
 
 
 # Commit changes and close the connection

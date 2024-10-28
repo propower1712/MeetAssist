@@ -19,23 +19,28 @@ def init_logging():
         ]
     )
 
+# Initialize connection variable as None
+connection = None
+placeholder = "?"
+
 is_lambda = "AWS_LAMBDA_FUNCTION_NAME" in os.environ
 
 if is_lambda:
     db_host = os.environ.get("DB_HOST")
-    db_user = os.environ.get("DB_USER")
+    db_user = os.environ.get("DB_USERNAME")
     db_password = os.environ.get("DB_PASSWORD")
     db_name = os.environ.get("DB_NAME")
     connection = pymysql.connect(
         host=db_host,
         user=db_user,
-        password=db_password,
-        database=db_name,
-        cursorclass=pymysql.cursors.DictCursor
+        passwd=db_password,
+        database=db_name
     )
     init_logging()
+    placeholder = "%s"
 
 def run_func(func, *args):
+    global connection
     if is_lambda:
         logging.info("lambda connection detected")
         with connection.cursor() as cursor:
@@ -61,12 +66,12 @@ def get_meetings(cursor, emails, start_day, end_day):
     email_meetings = {}
     for email in emails:
         # Query to fetch meetings within the start_day and end_day for the given email
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT m.start_time, m.end_time
             FROM meetings m
             JOIN meeting_participants mp ON m.meeting_id = mp.meeting_id
-            WHERE mp.email = ?
-            AND m.start_time >= ? AND m.end_time <= ?
+            WHERE mp.email = {placeholder}
+            AND m.start_time >= {placeholder} AND m.end_time <= {placeholder}
         """, (email, start_day, end_day))
 
         # Fetch all meeting time slots for the email within the date range
@@ -75,8 +80,8 @@ def get_meetings(cursor, emails, start_day, end_day):
         # Store the results in the dictionary
         email_meetings[email] = {
             "meetings_timeslots": [{
-                "start_time": meeting[0], 
-                "end_time": meeting[1]
+                "start_time": meeting[0] if is_lambda else datetime.fromisoformat(meeting[0]), 
+                "end_time": meeting[1] if is_lambda else datetime.fromisoformat(meeting[1])
             } for meeting in meetings]
         }
     return email_meetings
@@ -87,12 +92,12 @@ def check_overlapping_meetings(cursor, emails, proposed_start_time, proposed_end
         availability = True  # Assume the attendee is available by default
 
         # Fetch any meetings that overlap with the proposed timeslot
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT m.start_time, m.end_time
             FROM meetings m
             JOIN meeting_participants mp ON m.meeting_id = mp.meeting_id
-            WHERE mp.email = ?
-            AND m.start_time <= ? AND m.end_time >= ?
+            WHERE mp.email = {placeholder}
+            AND m.start_time <= {placeholder} AND m.end_time >= {placeholder}
         """, (email, proposed_end_time, proposed_start_time))
 
         overlapping_meetings = cursor.fetchall()
@@ -120,7 +125,9 @@ def check_availabilities(data):
 
             emails_availabilities = run_func(check_overlapping_meetings, emails, proposed_start_time, proposed_end_time)
             emails_data = {key: {**emails_meetings.get(key), **emails_availabilities.get(key)} for key in set(emails_meetings) | set(emails_availabilities)}
-        return emails_data
+            return emails_data
+        else:
+            return emails_meetings
     except (sqlite3.Error, pymysql.MySQLError) as e:
         logging.error(f"An error occurred: {e}", exc_info=True)
         return f"Error while checking availabilities. Tell user to contact administrator if the error persists: {e}"
@@ -128,7 +135,7 @@ def check_availabilities(data):
 
 def get_email_request(cursor, name):
     # Execute the SQL query to find the email by name
-    cursor.execute("SELECT email FROM users WHERE LOWER(name) = ?", (name,))
+    cursor.execute(f"SELECT email FROM users WHERE LOWER(name) = {placeholder}", (name,))
     # Fetch one result
     result = cursor.fetchone()
     return result
@@ -142,11 +149,12 @@ def get_email_by_name(name):
         return None
 
 
-def check_attendees(names):
+def check_attendees(data):
+    names = data["attendees_by_name"]
     attendees = {key: None for key in names}
     for name in names:
         attendees[name] = get_email_by_name(name.lower())
-    return json.dumps(attendees)
+    return attendees
 
 
 def get_users():
@@ -164,20 +172,20 @@ def get_users():
 
 def insert_meeting(cursor, title, start_time, end_time, participants):
     # Insert the new meeting using cursor
-    cursor.execute("""
+    cursor.execute(f"""
         INSERT INTO meetings (title, start_time, end_time)
-        VALUES (?, ?, ?)
-    """, (title, start_time, end_time))
+        VALUES ({placeholder}, {placeholder}, {placeholder})
+    """, (title, datetime.fromisoformat(start_time), datetime.fromisoformat(end_time)))
 
     # Get the meeting_id of the newly inserted meeting
-    meeting_id = cursor.execute("SELECT last_insert_rowid()").fetchone()[0]
+    meeting_id = cursor.lastrowid
 
 
     # Insert the participants for the new meeting
     for user_email in participants:
-        cursor.execute("""
+        cursor.execute(f"""
             INSERT INTO meeting_participants (meeting_id, email)
-            VALUES (?, ?)
+            VALUES ({placeholder}, {placeholder})
         """, (meeting_id, user_email))
     return None
 
@@ -196,12 +204,13 @@ def setup_meeting(data):
         success = False
         description = f"Error while creating the meeting. Tell user to contact administrator if the error persists: {e}"
 
-    return json.dumps({"success": success, "description": description})
+    return {"success": success, "description": description}
 
-
-
-def check_availabilities_json(data):
-    return(json.dumps(check_availabilities(data)))
+# Custom function to format datetime objects
+def datetime_converter(obj):
+    if isinstance(obj, datetime):
+        return obj.strftime("%A, %Y-%m-%d %H:%M:%S")  # Customize the format as needed
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 
 # Extracted function to normalize availabilities for a single attendee
@@ -284,10 +293,10 @@ def generate_work_hours_for_day(day):
 def get_unavailable_intervals(meeting_list, day):
     unavailable_intervals = []
     for meeting in meeting_list:
-        if datetime.fromisoformat(meeting['start_time']).date() == day.date():
+        if meeting['start_time'].date() == day.date():
             unavailable_intervals.append({
-                'start_time': datetime.fromisoformat(meeting['start_time']),
-                'end_time': datetime.fromisoformat(meeting['end_time'])
+                'start_time': meeting['start_time'],
+                'end_time': meeting['end_time']
             })
     return unavailable_intervals
 
@@ -350,29 +359,29 @@ def split_into_slots(intervals, meeting_duration):
             slot_start = slot_end
     return slots
 
+def dumps_to_json(name, data):
+    return json.dumps({"func_name" : name, "api_response" : data}, default=datetime_converter)
 
 def lambda_handler(event, context):
     data = event["arguments"]
     func_name = event["name"]
     if func_name == "check_attendees":
-        return check_attendees(data["attendees_by_name"])
+        return dumps_to_json(func_name, check_attendees(data))
     if func_name == "setup_meeting":
         if not is_iso8601(data["start_time"]) or not is_iso8601(data["end_time"]):
             logging.error("start_time or end_time not provided is ISO Format", exc_info=True)
-            return {
+            return json.dumps({
                 "error" : True,
                 "description" : "Please provide me end_time in the ISO 8601 format : YYYY-MM-DDTHH:MM:SS"
-            }
-        return setup_meeting(data)
+            })
+        return dumps_to_json(func_name, setup_meeting(data))
     if func_name == "check_availabilities":
-        return check_availabilities_json(data)
+        return dumps_to_json(func_name, check_availabilities(data))
     if func_name == "propose_availabilities":
-        return propose_availabilities(data)
+        return dumps_to_json(func_name, propose_availabilities(data))
     if func_name == "follow_up_action":
         message = {"role" : "assistant", "content" : data["content"]}
-        st.session_state.messages.append(message)
-        write_message(message)
-        return "{'description' : 'waiting for follow-up action...'}"
+        return dumps_to_json(func_name, {'description' : 'waiting for follow-up action...', 'message' : message})
     return {
         "error" : True,
         "description" : "unknown function provided. Please provide me one of the actions provided to you.\n"

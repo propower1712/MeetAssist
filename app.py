@@ -32,14 +32,19 @@ def send_to_llm():
             temperature=0
         )
         choice = response.parse().choices[0]
-        logging.info("Choice result - {}".format(choice))
         if(choice.finish_reason == "tool_calls"):
             tool_call = choice.message.tool_calls[0]
             arguments = tool_call.function.arguments
             name = tool_call.function.name
             st.session_state.messages.append({"role" : "assistant", "content" : None, "function_call" : {"arguments" : arguments, "name" : name}})
             data = {"name" : name, "arguments" : json.loads(arguments)}
+            logging.info("Choice result - {}".format(data))
             api_answer = lambda_handler(data, None)
+            api_answer_json = json.loads(api_answer)
+            if(api_answer_json['func_name'] == "follow_up_action"):
+                message = api_answer_json["api_response"]["message"]
+                st.session_state.messages.append(message)
+                write_message(message)
             logging.info("API Results - {}".format(api_answer))
             st.session_state.messages.append({"role" : "function", "name" : name,  "content" : api_answer})
             send_to_llm()

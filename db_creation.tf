@@ -1,26 +1,11 @@
 # First Script: Create an RDS Database with a Table
 
-# main.tf - Create MySQL RDS Database
-provider "aws" {
-  region = "us-east-1"
-  profile = "rbouyekhf"
-}
-
-variable "rds_username" {
-  description = "The username for the RDS instance."
-  type        = string
-}
-
-variable "rds_password" {
-  description = "The password for the RDS instance."
-  type        = string
-  sensitive   = true
-}
+# db_creation.tf - Create MySQL RDS Database
 
 resource "aws_security_group" "rds_sg" {
   name        = "rds_security_group"
   description = "Allow MySQL access"
-  vpc_id      = "vpc-0580e21abcd7c38a8"
+  vpc_id      = "${var.vpc_value}"
 
   ingress {
     description = "Allow MySQL access from my IP"
@@ -43,7 +28,7 @@ resource "aws_db_instance" "assistant_dev" {
   engine               = "mysql"
   engine_version       = "8.0"
   instance_class       = "db.t4g.micro"  # Lightest instance for learning purposes
-  db_name                 = "assistant"
+  db_name              = var.db_name
   username             = var.rds_username
   password             = var.rds_password
   publicly_accessible = true
@@ -60,10 +45,11 @@ resource "aws_db_instance" "assistant_dev" {
 # Use provisioners to initialize the database tables after creation
 resource "null_resource" "initialize_db" {
   depends_on = [aws_db_instance.assistant_dev]
-
+  
   triggers = {
-    always_run = "${timestamp()}"
+    script_hash = filebase64sha256("scripts/initialize_db.sh")
   }
+
   provisioner "local-exec" {
     command = "bash ./scripts/initialize_db.sh ${aws_db_instance.assistant_dev.address} ${var.rds_username} ${var.rds_password}"
   }
