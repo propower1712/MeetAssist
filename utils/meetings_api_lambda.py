@@ -157,13 +157,13 @@ def check_attendees(data):
     return attendees
 
 
-def get_users():
+def get_users_from_db():
     query = "SELECT * FROM users"
     try:
         if is_lambda:
-            return pd.read_sql_query(query, connection)
+            return pd.read_sql_query(query, connection).to_json(orient="records")
         else:
-            return pd.read_sql_query(query, sqlite3.connect('assistant.db'))
+            return pd.read_sql_query(query, sqlite3.connect('assistant.db')).to_json(orient="records")
     except (sqlite3.Error, pymysql.MySQLError):
         logging.error(f"Error: {str(e)}", exc_info=True)
         success = False
@@ -382,6 +382,8 @@ def lambda_handler(event, context):
     if func_name == "follow_up_action":
         message = {"role" : "assistant", "content" : data["content"]}
         return dumps_to_json(func_name, {'description' : 'waiting for follow-up action...', 'message' : message})
+    if func_name == "get_users_from_db":
+        return dumps_to_json(func_name, get_users_from_db())
     return {
         "error" : True,
         "description" : "unknown function provided. Please provide me one of the actions provided to you.\n"

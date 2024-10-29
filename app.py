@@ -3,8 +3,16 @@ import re
 import logging
 from utils.helpers import *
 from utils.meetings_api_lambda import *
+import boto3
 
 init_logging()
+
+is_deployed = "FUNCTION_NAME" in os.environ
+lambda_client = None
+function_name = None
+if is_deployed:
+    lambda_client = boto3.client('lambda', region_name='us-east-1')
+    function_name = os.getenv("FUNCTION_NAME")
 
 tools = load_json("resources/tools_functions.json")
 config = load_json("config.json")
@@ -37,22 +45,18 @@ def send_to_llm():
             arguments = tool_call.function.arguments
             name = tool_call.function.name
             st.session_state.messages.append({"role" : "assistant", "content" : None, "function_call" : {"arguments" : arguments, "name" : name}})
-            data = {"name" : name, "arguments" : json.loads(arguments)}
-            logging.info("Choice result - {}".format(data))
-            api_answer = lambda_handler(data, None)
-            api_answer_json = json.loads(api_answer)
-            if(api_answer_json['func_name'] == "follow_up_action"):
-                message = api_answer_json["api_response"]["message"]
-                st.session_state.messages.append(message)
-                write_message(message)
+            api_answer_json = get_lambda_answer(is_deployed, name, arguments, lambda_client, function_name)
+            api_answer = json.loads(api_answer_json)
             logging.info("API Results - {}".format(api_answer))
-            st.session_state.messages.append({"role" : "function", "name" : name,  "content" : api_answer})
+            if(api_answer['func_name'] == "follow_up_action"):
+                message = api_answer["api_response"]["message"]
+                st.session_state.messages.append(message)
+            st.session_state.messages.append({"role" : "function", "name" : name,  "content" : api_answer_json})
             send_to_llm()
         else:
             message = choice.message.content.strip()
             message = {"role" : "assistant", "content" : message}
             st.session_state.messages.append(message)
-            write_message(message)
     except Exception as e:
         logging.error(f"Error: {str(e)}", exc_info=True)
         st.session_state.messages.append({"role" : "assistant", "content" : "an error occurred. Please contact administrator if error persists"})
@@ -60,7 +64,7 @@ def send_to_llm():
 
 st.title("List of Users :")
 
-st.dataframe(get_users())
+st.dataframe(get_users(is_deployed, lambda_client, function_name))
 
 st.title("Meeting Assistant")
 
