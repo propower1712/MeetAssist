@@ -59,7 +59,6 @@ def invoke_lambda(lambda_client, function_name, payload=None):
         # Read the response payload
         response_payload = response['Payload'].read()
         response_data = json.loads(response_payload)
-
         return response_data
     except Exception as e:
         print("Error invoking Lambda:", e)

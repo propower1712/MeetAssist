@@ -10,13 +10,17 @@ init_logging()
 is_deployed = "FUNCTION_NAME" in os.environ
 lambda_client = None
 function_name = None
+config = None
 if is_deployed:
     lambda_client = boto3.client('lambda', region_name='us-east-1')
     function_name = os.getenv("FUNCTION_NAME")
-
+    openai_key = os.getenv("OPENAI_API_KEY")
+else:
+    config = load_json("config.json")
+    openai_key = config.get("OPENAI_API_KEY")
+    
+client = define_client(os.getenv("OPENAI_API_KEY"))
 tools = load_json("resources/tools_functions.json")
-config = load_json("config.json")
-client = define_client(config.get("OPENAI_API_KEY"))
 
 
 def send_to_llm():
