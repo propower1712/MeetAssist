@@ -26,12 +26,6 @@ tools = load_json("resources/tools_functions.json")
 def send_to_llm():
     """
     Communicates with OpenAI API to get a response for a given prompt.
-
-    Args:
-        new_prompt (str): The prompt to send to OpenAI API.
-
-    Returns:
-        str: The response from OpenAI API.
     """
 
     try:
@@ -65,15 +59,6 @@ def send_to_llm():
         logging.error(f"Error: {str(e)}", exc_info=True)
         st.session_state.messages.append({"role" : "assistant", "content" : "an error occurred. Please contact administrator if error persists"})
 
-
-st.title("List of Users :")
-
-st.dataframe(get_users(is_deployed, lambda_client, function_name))
-
-st.title("Meeting Assistant")
-
-st.session_state.answers_count = 0
-
 if "system_instructions" not in st.session_state:
     # Open the text file in read mode
     with open('resources/initial_prompt.txt', 'r') as file:
@@ -85,6 +70,21 @@ if "conformity_instructions" not in st.session_state:
     with open('resources/conformity_prompt.txt', 'r') as file:
         # Read the entire content of the file into a string variable
         st.session_state.conformity_instructions = file.read()
+
+if "app_presentation" not in st.session_state:
+    # Open the text file in read mode
+    with open('resources/app_presentation.txt', 'r') as file:
+        # Read the entire content of the file into a string variable
+        st.session_state.app_presentation = file.read()
+
+st.title("Meeting Assistant")
+
+# Display the explanation text in Streamlit
+st.markdown(st.session_state.app_presentation)
+
+st.title("List of Users :")
+
+st.dataframe(get_users(is_deployed, lambda_client, function_name))
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -99,7 +99,6 @@ for message in st.session_state.messages:
 if user_prompt := st.chat_input("What is up?"):
     if(user_prompt.strip()):
         # Display user message in chat message container
-        st.session_state.answers_count = 0
         with st.chat_message("user"):
             logging.info("User prompt - {}".format(user_prompt))
             st.markdown(user_prompt)

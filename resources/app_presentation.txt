@@ -1,0 +1,23 @@
+### Welcome to the Meeting Assistant!
+
+This application is here to streamline your meeting scheduling process, making it easier and more efficient to manage and coordinate with colleagues.
+
+#### Key Features:
+
+- **Create New Meetings**: Simply provide essential details like attendees, title, start and end time, and the assistant will handle the rest—checking for available slots to ensure a time that works for everyone.
+
+- **Availability Checks**: Whether organizing a meeting or checking someone’s availability, the assistant will confirm attendee schedules to help you secure the perfect time.
+
+- **Database Email Verification**: The assistant will automatically check the organization’s database for attendee emails. If there’s a need for additional information, it will confirm with you directly.
+
+- **User-Friendly Confirmations**: Before finalizing a meeting, the assistant will confirm all key details—meeting title, attendees, and time—to ensure everything is accurate and conflicts are avoided.
+
+#### Important Notes:
+
+- **Demo Application Only**: This app is for demonstration purposes only. No real meeting invitations are sent. It’s designed to showcase how a large language model (LLM) can assist in taking concrete actions by calling tools and interacting with data.
+
+- **Focused on Scheduling**: Currently, the assistant is limited to creating and checking schedules for meetings. Editing or removing meetings is planned for future updates.
+
+- **External Attendees**: If an attendee is outside the organization, the assistant can still invite them but will not have access to their full agenda.
+
+Thank you for using the Meeting Assistant during its trial phase! We’re excited to help make your scheduling easier and more efficient.

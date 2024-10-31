@@ -5,7 +5,7 @@
 resource "aws_security_group" "rds_sg" {
   name        = "rds_security_group"
   description = "Allow MySQL access"
-  vpc_id      = "${var.vpc_value}"
+  vpc_id      = data.aws_vpc.default.id
 
   ingress {
     description = "Allow MySQL access from my IP"
@@ -51,7 +51,7 @@ resource "null_resource" "initialize_db" {
   }
 
   provisioner "local-exec" {
-    command = "bash ./scripts/initialize_db.sh ${aws_db_instance.assistant_dev.address} ${var.rds_username} ${var.rds_password}"
+    command = "bash ./scripts/initialize_db.sh ${aws_db_instance.assistant_dev.address} ${var.rds_username} ${var.rds_password} ${var.db_name}"
   }
 }
 

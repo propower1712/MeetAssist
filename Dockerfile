@@ -35,4 +35,4 @@ CMD ["streamlit", "run", "app.py"]
 
 # ~/start-docker.sh
 # docker build -t meet_assist_img .
-# docker run -e FUNCTION_NAME=$(terraform output -raw lambda_function_arn) -e OPENAI_API_KEY=$(jq -r '.OPENAI_API_KEY' config.json) -p 8501:8501 -v ~/.aws:/root/.aws meet_assist_img
+# docker run -e FUNCTION_NAME=$(terraform output -raw lambda_function_arn) -e OPENAI_API_KEY=$(jq -r '.OPENAI_API_KEY' config.json) -p 8501:8501 -v ~/.aws:/root/.aws 211125691730.dkr.ecr.us-east-1.amazonaws.com/meet-assist-repo:latest

@@ -62,28 +62,40 @@ def is_iso8601(date_string):
     except ValueError:
         return False
 
+def check_email_exists(cursor, email):
+    query = "SELECT 1 FROM users WHERE email = {placeholder} LIMIT 1"
+    cursor.execute(query, (email,))
+    result = cursor.fetchone()
+    return result is not None
+
 def get_meetings(cursor, emails, start_day, end_day):
     email_meetings = {}
     for email in emails:
         # Query to fetch meetings within the start_day and end_day for the given email
-        cursor.execute(f"""
-            SELECT m.start_time, m.end_time
-            FROM meetings m
-            JOIN meeting_participants mp ON m.meeting_id = mp.meeting_id
-            WHERE mp.email = {placeholder}
-            AND m.start_time >= {placeholder} AND m.end_time <= {placeholder}
-        """, (email, start_day, end_day))
+        comment = ""
+        if not check_email_exists(cursor, email):
+            # Store the results in the dictionary
+            comment = "email is outside organization. His full agenda is not accessible."
+        else: 
+            cursor.execute(f"""
+                SELECT m.start_time, m.end_time
+                FROM meetings m
+                JOIN meeting_participants mp ON m.meeting_id = mp.meeting_id
+                WHERE mp.email = {placeholder}
+                AND m.start_time >= {placeholder} AND m.end_time <= {placeholder}
+            """, (email, start_day, end_day))
 
-        # Fetch all meeting time slots for the email within the date range
-        meetings = cursor.fetchall()
+            # Fetch all meeting time slots for the email within the date range
+            meetings = cursor.fetchall()
 
-        # Store the results in the dictionary
-        email_meetings[email] = {
-            "meetings_timeslots": [{
-                "start_time": meeting[0] if is_lambda else datetime.fromisoformat(meeting[0]), 
-                "end_time": meeting[1] if is_lambda else datetime.fromisoformat(meeting[1])
-            } for meeting in meetings]
-        }
+            # Store the results in the dictionary
+            email_meetings[email] = {
+                "meetings_timeslots": [{
+                    "start_time": meeting[0] if is_lambda else datetime.fromisoformat(meeting[0]), 
+                    "end_time": meeting[1] if is_lambda else datetime.fromisoformat(meeting[1])
+                } for meeting in meetings],
+                "comment" : comment
+            }
     return email_meetings
 
 def check_overlapping_meetings(cursor, emails, proposed_start_time, proposed_end_time):

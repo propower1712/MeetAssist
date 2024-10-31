@@ -17,7 +17,7 @@ def get_lambda_answer(is_deployed, name, arguments, lambda_client = None, functi
         api_answer = lambda_handler(data, None)
     return api_answer
 
-@st.cache_data
+@st.cache_data(show_spinner = "Loading database users")
 def get_users(is_deployed, _lambda_client = None, _function_name = None):
     response = get_lambda_answer(is_deployed, "get_users_from_db", '{"content" : ""}', _lambda_client, _function_name)
     logging.info("Response is : {}".format(response))

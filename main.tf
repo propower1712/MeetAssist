@@ -1,10 +1,3 @@
-# main.tf - General configuration for AWS Provider
-
-provider "aws" {
-  region  = "us-east-1"
-  profile = "rbouyekhf"
-}
-
 # Define variables that may be used across multiple resources
 variable "rds_username" {
   description = "The username for the RDS instance."
@@ -22,12 +15,32 @@ variable "db_name" {
   type        = string
 }
 
-variable "vpc_value" {
-  description = "The vpc id where to deploy the db & lambda."
+variable "region" {
+  description = "Define the region where to deploy resources."
   type        = string
 }
 
-variable "subnet_ids" {
-  description = "List of subnet IDs for RDS and Lambda"
-  type        = list(string)
+locals {
+  # Get JSON data
+  config_data = jsondecode(file("config.json"))
+  openai_key  = local.config_data.OPENAI_API_KEY
+}
+
+# main.tf - General configuration for AWS Provider
+provider "aws" {
+  region  = var.region
+  profile = "rbouyekhf"
+}
+
+# Define VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Get the list of subnet IDs for the default VPC
+data "aws_subnets" "default_vpc_subnets" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
 }

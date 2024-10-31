@@ -23,7 +23,7 @@
         "type" : "function",
         "function" : {
             "name" : "check_availabilities",
-            "description": "Use this function to check availabilities of attendees when the user gives you a timeslot. You need first to get their emails. Interpret an empty list as result of function as full availability. Please always remember that this function returns list of meetings, the availabilities are outside those timeslots.",
+            "description": "Use this function to check availabilities of attendees when the user gives you a timeslot. You need first to get their emails. Interpret an empty list as result of function as full availability if attendee is inside organization. If attendee is outside organization, inform the user that you don't have access to his full agenda.",
             "parameters" : {
                 "type" : "object",
                 "properties" : {
