@@ -18,6 +18,6 @@ This application is here to streamline your meeting scheduling process, making i
 
 - **Focused on Scheduling**: Currently, the assistant is limited to creating and checking schedules for meetings. Editing or removing meetings is planned for future updates.
 
-- **External Attendees**: If an attendee is outside the organization, the assistant can still invite them but will not have access to their full agenda.
+- **External Attendees**: If an attendee is outside the organization, the assistant can still invite them but will not have access to their full agenda. For that he needs to collect the email from user.
 
 Thank you for using the Meeting Assistant during its trial phase! We’re excited to help make your scheduling easier and more efficient.

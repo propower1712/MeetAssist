@@ -100,7 +100,7 @@
                         "items" : {
                             "type" : "string"
                         },
-                        "description" : "list of emails' attendees to set up the meeting."
+                        "description" : "list of emails' attendees to set up the meeting. This list should not be empty. You need to collect at least one email from users' database or from the user directly."
                     },
                     "start_time" : {
                         "type" : "string",

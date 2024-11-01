@@ -1,4 +1,5 @@
-# Create lambda repo
+# Create lambda 
+cd ..
 rm -rf lambda/*
 rm meetings_api.zip
 mkdir -p lambda/utils
@@ -7,4 +8,4 @@ cp utils/__init__.py lambda/utils
 cp utils/constants.py lambda/utils
 cd lambda
 7z a -tzip ../meetings_api.zip .
-cd ..
+cd ../terraform_scripts

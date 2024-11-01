@@ -47,11 +47,11 @@ resource "null_resource" "initialize_db" {
   depends_on = [aws_db_instance.assistant_dev]
   
   triggers = {
-    script_hash = filebase64sha256("scripts/initialize_db.sh")
+    script_hash = filebase64sha256("../scripts/initialize_db.sh")
   }
 
   provisioner "local-exec" {
-    command = "bash ./scripts/initialize_db.sh ${aws_db_instance.assistant_dev.address} ${var.rds_username} ${var.rds_password} ${var.db_name}"
+    command = "bash ../scripts/initialize_db.sh ${aws_db_instance.assistant_dev.address} ${var.rds_username} ${var.rds_password} ${var.db_name}"
   }
 }
 

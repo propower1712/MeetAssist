@@ -22,7 +22,7 @@ variable "region" {
 
 locals {
   # Get JSON data
-  config_data = jsondecode(file("config.json"))
+  config_data = jsondecode(file("../config.json"))
   openai_key  = local.config_data.OPENAI_API_KEY
 }
 
@@ -44,3 +44,5 @@ data "aws_subnets" "default_vpc_subnets" {
     values = [data.aws_vpc.default.id]
   }
 }
+
+# terraform -chdir=./terraform_scripts apply -var-file="terraform.tfvars" -auto-approve

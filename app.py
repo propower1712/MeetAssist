@@ -12,7 +12,7 @@ lambda_client = None
 function_name = None
 config = None
 if is_deployed:
-    lambda_client = boto3.client('lambda', region_name='us-east-1')
+    lambda_client = boto3.client('lambda', region_name=os.getenv("REGION"))
     function_name = os.getenv("FUNCTION_NAME")
     openai_key = os.getenv("OPENAI_API_KEY")
 else:
@@ -43,7 +43,7 @@ def send_to_llm():
             arguments = tool_call.function.arguments
             name = tool_call.function.name
             st.session_state.messages.append({"role" : "assistant", "content" : None, "function_call" : {"arguments" : arguments, "name" : name}})
-            api_answer_json = get_lambda_answer(is_deployed, name, arguments, lambda_client, function_name)
+            api_answer_json = get_lambda_answer(name, arguments, lambda_client, function_name)
             api_answer = json.loads(api_answer_json)
             logging.info("API Results - {}".format(api_answer))
             if(api_answer['func_name'] == "follow_up_action"):
@@ -84,7 +84,7 @@ st.markdown(st.session_state.app_presentation)
 
 st.title("List of Users :")
 
-st.dataframe(get_users(is_deployed, lambda_client, function_name))
+st.dataframe(get_users(lambda_client, function_name))
 
 # Initialize chat history
 if "messages" not in st.session_state:

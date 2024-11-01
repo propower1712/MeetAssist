@@ -1,5 +1,6 @@
 resource "aws_ecr_repository" "meet_assist_repo" {
   name = "meet-assist-repo"
+  force_delete = true
 }
 
 output "ecr_repository_url" {
@@ -11,18 +12,20 @@ resource "null_resource" "upload_docker_img" {
   depends_on = [aws_ecr_repository.meet_assist_repo]
   
   triggers = {
-    script_hash1 = file("scripts/upload_docker_img.sh"),
-    script_hash2 = file("utils/helpers.py"),
-    script_hash3 = file("utils/constants.py"),
-    script_hash4 = file("utils/meetings_api_lambda.py"),
-    script_hash5 = file("resources/conformity_prompt.txt"),
-    script_hash6 = file("resources/initial_prompt.txt"),
-    script_hash7 = file("resources/tools_functions.json"),
-    script_hash7 = file("resources/app_presentation.txt")
+    script_hash1 = file("../scripts/upload_docker_img.sh"),
+    script_hash2 = file("../utils/helpers.py"),
+    script_hash3 = file("../utils/constants.py"),
+    script_hash4 = file("../utils/meetings_api_lambda.py"),
+    script_hash5 = file("../resources/conformity_prompt.txt"),
+    script_hash6 = file("../resources/initial_prompt.txt"),
+    script_hash7 = file("../resources/tools_functions.json"),
+    script_hash8 = file("../resources/app_presentation.txt"),
+    script_hash9 = file("../Dockerfile"),
+    script_hash10= file("../app.py")
   }
 
   provisioner "local-exec" {
-    command = "bash ./scripts/upload_docker_img.sh ${var.region} ${aws_ecr_repository.meet_assist_repo.repository_url}"
+    command = "bash ../scripts/upload_docker_img.sh ${var.region} ${aws_ecr_repository.meet_assist_repo.repository_url}"
   }
 }
 
@@ -112,7 +115,7 @@ resource "aws_ecs_task_definition" "meet_assist_task" {
   container_definitions = jsonencode([
     {
       name      = "meet-assist-container",
-      image     = "${aws_ecr_repository.meet_assist_repo.repository_url}@${data.aws_ecr_image.latest_meet_assist_image.image_digest}",  # Replace with your image URL
+      image     = "${aws_ecr_repository.meet_assist_repo.repository_url}:latest",  # Replace with your image URL
       portMappings = [
         {
           containerPort = 8501
@@ -120,6 +123,10 @@ resource "aws_ecs_task_definition" "meet_assist_task" {
         }
       ],
       environment = [
+        {
+          name  = "REGION"
+          value = var.region
+        },
         {
           name  = "FUNCTION_NAME"
           value = aws_lambda_function.my_lambda.arn
@@ -161,7 +168,7 @@ resource "aws_ecs_service" "meet_assist_service" {
     container_name   = "meet-assist-container"
     container_port   = 8501
   }
-  depends_on = [aws_cloudwatch_log_group.meet_assist_logs, aws_lb_listener.app_listener]
+  depends_on = [aws_cloudwatch_log_group.meet_assist_logs, aws_lb_listener.app_https_listener]
 }
 
 # CloudWatch Log Group

@@ -4,6 +4,7 @@
 REGION=$1
 ECR_REPO_URL=$2
 
+cd ..
 # Build the docker image
 docker build --no-cache -t meet_assist_img .
 
@@ -15,3 +16,5 @@ docker tag meet_assist_img:latest $ECR_REPO_URL:latest
 
 # Push the image to ECR
 docker push $ECR_REPO_URL:latest
+
+cd terraform_scripts

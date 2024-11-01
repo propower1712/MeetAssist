@@ -39,8 +39,8 @@ mysql -h "$RDS_ENDPOINT" -P 3306 -u "$RDS_USERNAME" -p"$RDS_PASSWORD" $RDS_DBNAM
 
 
 # Load data from CSV files
-mysql --local-infile=1 -h "$RDS_ENDPOINT" -P 3306 -u "$RDS_USERNAME" -p"$RDS_PASSWORD" $RDS_DBNAME -e "LOAD DATA LOCAL INFILE 'input/users.csv' INTO TABLE users FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 LINES (name, email);"
+mysql --local-infile=1 -h "$RDS_ENDPOINT" -P 3306 -u "$RDS_USERNAME" -p"$RDS_PASSWORD" $RDS_DBNAME -e "LOAD DATA LOCAL INFILE '../input/users.csv' INTO TABLE users FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 LINES (name, email);"
 
-mysql --local-infile=1 -h "$RDS_ENDPOINT" -P 3306 -u "$RDS_USERNAME" -p"$RDS_PASSWORD" $RDS_DBNAME -e "LOAD DATA LOCAL INFILE 'input/meetings.csv' INTO TABLE meetings FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 LINES (meeting_id, title, start_time, end_time);"
+mysql --local-infile=1 -h "$RDS_ENDPOINT" -P 3306 -u "$RDS_USERNAME" -p"$RDS_PASSWORD" $RDS_DBNAME -e "LOAD DATA LOCAL INFILE '../input/meetings.csv' INTO TABLE meetings FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 LINES (meeting_id, title, start_time, end_time);"
 
-mysql --local-infile=1 -h "$RDS_ENDPOINT" -P 3306 -u "$RDS_USERNAME" -p"$RDS_PASSWORD" $RDS_DBNAME -e "LOAD DATA LOCAL INFILE 'input/meeting_participants_v2.csv' INTO TABLE meeting_participants FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 LINES (meeting_id, email);"
+mysql --local-infile=1 -h "$RDS_ENDPOINT" -P 3306 -u "$RDS_USERNAME" -p"$RDS_PASSWORD" $RDS_DBNAME -e "LOAD DATA LOCAL INFILE '../input/meeting_participants_v2.csv' INTO TABLE meeting_participants FIELDS TERMINATED BY ',' LINES TERMINATED BY '\n' IGNORE 1 LINES (meeting_id, email);"
