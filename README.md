@@ -19,24 +19,34 @@ The main goal of this project is to demonstrate how GPT models can be utilized t
 - Provides a conversational interface for user interaction.
 - Demonstrates a deployment process of GenAI project on AWS.
 
+## OpenAI API and Function Calling Capabilities
+
+MeetAssist uses OpenAI's API with function calling to automate meeting scheduling tasks. When a user request requires backend action (like retrieving or adding meetings), OpenAI’s API sends the request through ECS, which communicates with AWS Lambda to interact with the RDS database.
+
+### Key Benefits
+
+- **Automated Task Handling**: Natural language requests trigger backend actions, simplifying user interactions.
+- **Efficient Communication**: OpenAI, ECS, and Lambda work together to process requests seamlessly.
+- **Enhanced User Experience**: Users can make requests conversationally, improving ease of use.
+
 ## Deployment Architecture
 
 The MeetAssist deployment utilizes a range of AWS services, ensuring high availability, scalability, and security:
 
 1. **Amazon RDS**  
-   Acts as the primary database for user and meeting data, storing information persistently and securely. RDS communicates with AWS Lambda, which retrieves and manages data as needed.
+   Acts as the primary database for user and meeting data, storing information persistently and securely. RDS communicates with AWS Lambda, which retrieves and manages data as needed. The database used in this project is "MySQL".
 
 2. **AWS Lambda**  
-   The Lambda functions in MeetAssist handle the core scheduling logic and process user requests. Lambda functions are invoked by ECS tasks, making it a scalable, cost-efficient backend component.
+   The Lambda functions in MeetAssist handle the assistant requests as some API. After getting the request from ECS, it proceeds to fetching data from the database or creating new meeting. Lambda functions are invoked by an ECS task.
 
 3. **Amazon ECS (Elastic Container Service) and ECR (Elastic Container Registry)**  
-   ECS hosts the MeetAssist application in a Docker container, ensuring seamless deployment and scaling. The container images are stored and versioned in Amazon ECR, allowing for smooth updates to the ECS service.
+   ECS hosts the streamlit MeetAssist application in a Docker container. The streamlit app communicates with OpenAI API to get content from the user. When needed, the ECS sends to lambda API request to fetch data or update database. The container images are stored and versioned in Amazon ECR.
 
 4. **Application Load Balancer (ALB)**  
-   An Application Load Balancer routes traffic to the ECS tasks, distributing requests evenly and ensuring reliable access for users. The ALB provides a stable endpoint for MeetAssist, helping to balance the load and maintain availability.
+   An Application Load Balancer routes traffic to the ECS task.
 
 5. **Amazon Route 53**  
-   MeetAssist is made publicly accessible through a domain managed by Route 53. The ALB is linked to this domain, giving users a simple, user-friendly URL to access the application.
+   MeetAssist is made publicly accessible through a domain managed by Route 53. The ALB is linked to this domain, giving users a simple, user-friendly URL to access the application. An ACM certificate is created for this domain name using AWS ACM.
 
 6. **Terraform**  
    All AWS resources and infrastructure are managed with Terraform, enabling efficient deployment and consistent configuration. This infrastructure-as-code approach ensures that deployments are reproducible, maintainable, and easy to scale.
@@ -50,4 +60,5 @@ The project was developed to showcase how GPT models can be applied in real-worl
 - **OpenAI GPT (with function calling)**: Core engine for processing user input and automating tasks.
 - **SQL**: Used to manage users and meeting data.
 - **Python**: Main programming language for backend logic.
+- **Streamlit**: The web application technology for fast deployment of Data Science projects.
 - **AWS**: Terraform scripts using several AWS services.
