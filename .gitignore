@@ -12,3 +12,6 @@ lambda*
 meetings_api.zip
 venv
 test_lambda.json
+License.txt
+assistant.db-journal
+terraform_1.9.8_linux_amd64.zip
